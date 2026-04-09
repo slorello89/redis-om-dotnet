@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM.Modeling;
 using Redis.OM.Modeling.Vectors;
 
 namespace Redis.OM.Searching.Query
@@ -18,6 +19,28 @@ namespace Redis.OM.Searching.Query
         public RedisQuery(string index)
         {
             this.Index = index;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RedisQuery"/> class for a registered Redis OM document type.
+        /// </summary>
+        /// <param name="documentType">The document type decorated with <see cref="DocumentAttribute"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="documentType"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if <paramref name="documentType"/> is not decorated with <see cref="DocumentAttribute"/>.</exception>
+        public RedisQuery(Type documentType)
+        {
+            if (documentType == null)
+            {
+                throw new ArgumentNullException(nameof(documentType));
+            }
+
+            var documentAttribute = documentType.GetObjectDefinition();
+            if (documentAttribute == null)
+            {
+                throw new InvalidOperationException($"Type '{documentType.Name}' must be decorated with a DocumentAttribute to infer a RediSearch index.");
+            }
+
+            Index = documentAttribute.GetIndexName(documentType);
         }
 
         /// <summary>

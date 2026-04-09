@@ -118,6 +118,15 @@ namespace Redis.OM
             where T : notnull => SearchAsync<T>(CreateSearchQuery(indexName, queryText, queryParameters));
 
         /// <summary>
+        /// Executes a provider-level RediSearch query using the shared command implementation.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="query">The shared RediSearch query object.</param>
+        /// <returns>A typed search response.</returns>
+        public virtual Task<SearchResponse<T>> SearchAsync<T>(RedisQuery query)
+            where T : notnull => Connection.SearchAsync<T>(query);
+
+        /// <summary>
         /// Gets a redis collection.
         /// </summary>
         /// <typeparam name="T">The type the collection will be retrieving.</typeparam>
@@ -159,15 +168,6 @@ namespace Redis.OM
             query.NamedParameters = BuildNamedParameters(queryParameters, normalizedQueryText);
             return query;
         }
-
-        /// <summary>
-        /// Executes a provider-level RediSearch query using the shared command implementation.
-        /// </summary>
-        /// <typeparam name="T">The materialized result type.</typeparam>
-        /// <param name="query">The shared RediSearch query object.</param>
-        /// <returns>A typed search response.</returns>
-        internal virtual Task<SearchResponse<T>> SearchAsync<T>(RedisQuery query)
-            where T : notnull => Connection.SearchAsync<T>(query);
 
         private static List<RedisQueryParameter> BuildNamedParameters(object queryParameters, string queryText)
         {

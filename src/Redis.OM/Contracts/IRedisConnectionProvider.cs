@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Redis.OM.Aggregation;
 using Redis.OM.Searching;
+using Redis.OM.Searching.Query;
 
 namespace Redis.OM.Contracts
 {
@@ -54,6 +55,15 @@ namespace Redis.OM.Contracts
         /// </code>
         /// </example>
         Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, object queryParameters)
+            where T : notnull;
+
+        /// <summary>
+        /// Executes a RediSearch query that has already been configured through <see cref="RedisQuery"/>.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="query">The RediSearch query to execute.</param>
+        /// <returns>A typed search response.</returns>
+        Task<SearchResponse<T>> SearchAsync<T>(RedisQuery query)
             where T : notnull;
 
         /// <summary>
