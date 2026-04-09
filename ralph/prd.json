@@ -1,0 +1,156 @@
+{
+  "project": "Redis.OM",
+  "branchName": "ralph/dapper-interoperability",
+  "description": "Add a Dapper-like RediSearch read API on top of RedisQuery so command-oriented .NET teams can execute parameterized queries and materialize typed results without using IQueryable.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add public search query entry point",
+      "description": "As a .NET developer who prefers explicit commands, I want a public async API entry point for RediSearch queries so that I can execute reads without constructing IQueryable instances.",
+      "acceptanceCriteria": [
+        "Add a public async query API for RediSearch reads without requiring IQueryable",
+        "The API accepts an index name or equivalent index-targeting input",
+        "Add XML docs or markdown example showing basic query-string execution",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Route the new API through RedisQuery internals",
+      "description": "As a maintainer, I want the command-oriented API to reuse RedisQuery internals so that RediSearch execution behavior does not diverge.",
+      "acceptanceCriteria": [
+        "The new query entry point uses RedisQuery or shared internal query infrastructure instead of a separate execution path",
+        "Equivalent read scenarios use the same underlying execution behavior as existing query APIs",
+        "Add or update a test proving the new API does not bypass shared query internals",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add named parameter binding for search queries",
+      "description": "As a .NET developer, I want to bind named parameters into RediSearch queries so that I do not have to manually concatenate values into query strings.",
+      "acceptanceCriteria": [
+        "The API accepts a parameter object, dictionary, or equivalent named-parameter input",
+        "Named parameters are bound into RediSearch query execution for supported query scenarios",
+        "Missing or invalid required parameters produce a deterministic error",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Support full document materialization",
+      "description": "As a .NET developer, I want query results to materialize into mapped Redis OM document types so that I can reuse existing model definitions.",
+      "acceptanceCriteria": [
+        "Search query results can be materialized into registered Redis OM document types",
+        "Materialization reuses existing serialization and property mapping rules where applicable",
+        "Null or missing fields are handled consistently with current Redis OM materialization behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add field selection for projection scenarios",
+      "description": "As a .NET developer, I want to specify returned fields so that projection queries can fetch only the data needed for a result type.",
+      "acceptanceCriteria": [
+        "The API supports selecting a subset of returned fields for projection scenarios",
+        "Selected fields are passed through to RediSearch execution without forcing full-document hydration",
+        "Add documentation or example usage for field selection",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Materialize projections into typed DTOs",
+      "description": "As a .NET developer, I want to map selected fields into custom DTO types so that query results can match application-specific read models.",
+      "acceptanceCriteria": [
+        "Returned field subsets can be materialized into a custom DTO type",
+        "Projection mapping uses a documented and deterministic field-to-property rule",
+        "Projection queries do not require unrelated document fields to be present",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Define anonymous-like projection result shape",
+      "description": "As a .NET developer, I want a lightweight ad hoc projection result shape so that simple reads do not require a dedicated DTO for every query.",
+      "acceptanceCriteria": [
+        "Implement one documented anonymous-like projection approach such as a dynamic row object or equivalent helper type",
+        "The public API does not depend on constructing C# anonymous types across public boundaries",
+        "Document the limitations and intended usage of the selected result shape",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Add aggregation execution entry point",
+      "description": "As a .NET developer, I want the same command-oriented surface to execute RediSearch aggregations so that searches and aggregations share a consistent programming model.",
+      "acceptanceCriteria": [
+        "Add an aggregation execution path to the interoperability layer",
+        "Aggregation execution is documented separately from standard search-result execution where behavior differs",
+        "Add at least one example showing aggregation usage from the new API",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Map aggregation rows into typed results",
+      "description": "As a .NET developer, I want aggregation rows to map into typed result models so that aggregation queries can feed application DTOs directly.",
+      "acceptanceCriteria": [
+        "Aggregation results can be materialized into a typed result model or documented row object",
+        "The API clearly distinguishes aggregation-result mapping from full-document materialization",
+        "Add automated coverage for typed aggregation result mapping",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Document command-oriented API scope and GitHub workflow",
+      "description": "As a maintainer, I want clear documentation for the new API's supported scope and contribution workflow so that teams use it correctly and repository automation targets the intended fork.",
+      "acceptanceCriteria": [
+        "Documentation states that the feature is a command-oriented RediSearch layer and not a general-purpose low-level Redis client",
+        "Documentation includes examples for search queries, named parameters, full-document mapping, DTO projection, anonymous-like projections, and aggregation",
+        "Documentation states that any GitHub issue, PR, or automation interaction for this work must target https://github.com/slorello89/redis-om-dotnet",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

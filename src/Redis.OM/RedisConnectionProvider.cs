@@ -1,7 +1,12 @@
-﻿using Redis.OM.Aggregation;
+﻿using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using Redis.OM.Aggregation;
 using Redis.OM.Contracts;
 using Redis.OM.Searching;
+using Redis.OM.Searching.Query;
 using StackExchange.Redis;
+
+[assembly: InternalsVisibleTo("Redis.OM.Unit.Tests")]
 
 namespace Redis.OM
 {
@@ -10,7 +15,8 @@ namespace Redis.OM
     /// </summary>
     public class RedisConnectionProvider : IRedisConnectionProvider
     {
-        private readonly IConnectionMultiplexer _mux;
+        private readonly IRedisConnection? _connection;
+        private readonly IConnectionMultiplexer? _mux;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RedisConnectionProvider"/> class.
@@ -50,9 +56,18 @@ namespace Redis.OM
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="RedisConnectionProvider"/> class for tests with a prebuilt Redis connection.
+        /// </summary>
+        /// <param name="connection">The Redis connection to reuse.</param>
+        internal RedisConnectionProvider(IRedisConnection connection)
+        {
+            _connection = connection;
+        }
+
+        /// <summary>
         /// Gets a command level interface to redis.
         /// </summary>
-        public IRedisConnection Connection => new RedisConnection(_mux.GetDatabase());
+        public IRedisConnection Connection => _connection ?? new RedisConnection(_mux!.GetDatabase());
 
         /// <summary>
         /// Gets an aggregation set for redis.
@@ -61,6 +76,21 @@ namespace Redis.OM
         /// <param name="chunkSize">Size of chunks to use during pagination, larger chunks = larger payloads returned but fewer round trips.</param>
         /// <returns>the aggregation set.</returns>
         public RedisAggregationSet<T> AggregationSet<T>(int chunkSize = 100) => new (Connection, chunkSize: chunkSize);
+
+        /// <summary>
+        /// Executes a RediSearch query against the supplied index without constructing an <see cref="IRedisCollection{T}"/>.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string. Defaults to <c>*</c>.</param>
+        /// <returns>A typed search response.</returns>
+        /// <example>
+        /// <code>
+        /// var results = await provider.SearchAsync&lt;Person&gt;("person-idx", "@Name:{Steve}");
+        /// </code>
+        /// </example>
+        public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText = "*")
+            where T : notnull => Connection.SearchAsync<T>(new RedisQuery(indexName) { QueryText = queryText ?? "*" });
 
         /// <summary>
         /// Gets a redis collection.
