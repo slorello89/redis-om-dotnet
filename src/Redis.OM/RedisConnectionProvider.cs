@@ -125,12 +125,21 @@ namespace Redis.OM
         /// <param name="queryText">The RediSearch query string.</param>
         /// <param name="returnFields">The fields to request from RediSearch.</param>
         /// <returns>A typed search response.</returns>
+        /// <remarks>
+        /// Projection DTOs bind returned field names to properties on <typeparamref name="T"/>.
+        /// Use <see cref="ReturnField"/> aliases or <see cref="Redis.OM.Modeling.RedisFieldAttribute"/>
+        /// when the returned field name should map to a different property name.
+        /// </remarks>
         /// <example>
         /// <code>
-        /// var results = await provider.SearchAsync&lt;string&gt;(
+        /// var results = await provider.SearchAsync&lt;PersonNameProjection&gt;(
         ///     "person-idx",
         ///     "@Name:{Steve}",
-        ///     new ReturnFields(new[] { "Name" }));
+        ///     new ReturnFields(new[]
+        ///     {
+        ///         new ReturnField("Name", "DisplayName"),
+        ///         new ReturnField("Age", "YearsOld"),
+        ///     }));
         /// </code>
         /// </example>
         public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, ReturnFields returnFields)
@@ -145,13 +154,22 @@ namespace Redis.OM
         /// <param name="queryParameters">An anonymous object or dictionary containing named query parameters.</param>
         /// <param name="returnFields">The fields to request from RediSearch.</param>
         /// <returns>A typed search response.</returns>
+        /// <remarks>
+        /// Projection DTOs bind returned field names to properties on <typeparamref name="T"/>.
+        /// Use <see cref="ReturnField"/> aliases or <see cref="Redis.OM.Modeling.RedisFieldAttribute"/>
+        /// when the returned field name should map to a different property name.
+        /// </remarks>
         /// <example>
         /// <code>
-        /// var results = await provider.SearchAsync&lt;string&gt;(
+        /// var results = await provider.SearchAsync&lt;PersonNameProjection&gt;(
         ///     "person-idx",
         ///     "@Name:{$name}",
         ///     new { name = "Steve" },
-        ///     new ReturnFields(new[] { "Name" }));
+        ///     new ReturnFields(new[]
+        ///     {
+        ///         new ReturnField("Name", "DisplayName"),
+        ///         new ReturnField("Age", "YearsOld"),
+        ///     }));
         /// </code>
         /// </example>
         public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, object queryParameters, ReturnFields returnFields)

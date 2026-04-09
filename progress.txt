@@ -5,6 +5,7 @@ Started: Thu Apr  9 14:49:15 EDT 2026
 - Provider-level RediSearch APIs should construct a `RedisQuery` and then delegate to `SearchAsync(RedisQuery)` so new entry points keep the shared FT.SEARCH serialization and execution path.
 - When a command-oriented query should target a mapped Redis OM document type, construct `RedisQuery` from the document `Type` so index resolution stays tied to `[Document]` metadata instead of duplicating index-name strings.
 - Provider overloads that add projection behavior should accept `ReturnFields` directly instead of `params string[]`, because the command-oriented API already uses `object queryParameters` and string-based overloads become ambiguous for callers.
+- Projection hydration should treat Redis field names as lookup keys and CLR property names as JSON output keys, so typed DTO projections can rely on `ReturnField` aliases or `[RedisField(PropertyName = ...)]` without breaking deserialization.
 
 ## 2026-04-09 15:16:50 EDT - US-003
 - Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
@@ -33,4 +34,13 @@ Started: Thu Apr  9 14:49:15 EDT 2026
   - Patterns discovered: provider-level projection support can stay minimal by setting `RedisQuery.Return` and reusing the existing FT.SEARCH serializer instead of adding a custom projection execution path.
   - Gotchas encountered: `params string[]` is the wrong public API shape here because it competes with the existing `object queryParameters` overload and makes single-field calls ambiguous.
   - Useful context: primitive projections already materialize from FT.SEARCH field/value responses, so field-selection coverage can validate the `RETURN` clause without waiting on DTO-mapping work.
+---
+## 2026-04-09 15:33:53 EDT - US-006
+- Implemented typed DTO projection support for provider-level searches by documenting the field-to-property mapping rule, adding DTO projection coverage for both `AS` aliases and `[RedisField(PropertyName = ...)]`, and fixing shared hash-to-object hydration so Redis field names map correctly onto CLR property names during projection materialization.
+- Files changed: `src/Redis.OM/Contracts/IRedisConnectionProvider.cs`, `src/Redis.OM/RedisConnectionProvider.cs`, `src/Redis.OM/RedisObjectHandler.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `prd.json`, `ralph/prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0`; `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisObjectHandlerTests` passed for `net6.0` and `net7.0`
+- Learnings for future iterations:
+  - Patterns discovered: typed projection DTOs can reuse the existing `SearchResponse<T>` hydration path as long as JSON emission keeps Redis lookup names separate from CLR property names.
+  - Gotchas encountered: `[RedisField(PropertyName = ...)]` alone was not enough for DTO projections until `SendToJson` stopped serializing the Redis field name as the JSON property name.
+  - Useful context: `ReturnField("redisName", "ClrPropertyName")` is the most direct public way to bind projection results onto read-model DTOs without requiring document attributes.
 ---

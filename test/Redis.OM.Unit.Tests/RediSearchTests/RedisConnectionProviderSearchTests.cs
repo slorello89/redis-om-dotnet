@@ -200,6 +200,71 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
         }
 
         [Fact]
+        public async Task SearchAsyncMaterializesProjectedFieldsIntoTypedDto()
+        {
+            var projectionReply = new RedisReply[]
+            {
+                new(1),
+                new("Redis.OM.Unit.Tests.RediSearchTests.Person:01FVN836BNQGYMT80V7RCVY73N"),
+                new(new RedisReply[]
+                {
+                    "DisplayName",
+                    "Steve",
+                    "YearsOld",
+                    "32",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(projectionReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<PersonProjection>(
+                "person-idx",
+                "@Name:{Steve}",
+                new ReturnFields(new[]
+                {
+                    new ReturnField("Name", "DisplayName"),
+                    new ReturnField("Age", "YearsOld"),
+                }));
+
+            var document = Assert.Single(result.Documents).Value;
+            Assert.Equal("Steve", document.DisplayName);
+            Assert.Equal(32, document.YearsOld);
+            Assert.Null(document.UnrelatedField);
+        }
+
+        [Fact]
+        public async Task SearchAsyncMaterializesProjectedFieldsIntoTypedDtoUsingRedisFieldAttribute()
+        {
+            var projectionReply = new RedisReply[]
+            {
+                new(1),
+                new("Redis.OM.Unit.Tests.RediSearchTests.Person:01FVN836BNQGYMT80V7RCVY73N"),
+                new(new RedisReply[]
+                {
+                    "Name",
+                    "Steve",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(projectionReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<PersonNameOnlyProjection>(
+                "person-idx",
+                "@Name:{Steve}",
+                new ReturnFields(new[] { "Name" }));
+
+            var document = Assert.Single(result.Documents).Value;
+            Assert.Equal("Steve", document.DisplayName);
+            Assert.Null(document.MissingField);
+        }
+
+        [Fact]
         public async Task SearchAsyncThrowsWhenRequiredParameterIsMissing()
         {
             var provider = new RedisConnectionProvider(_connection);
@@ -297,6 +362,23 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
 
         private sealed class UndecoratedDocument
         {
+        }
+
+        private sealed class PersonProjection
+        {
+            public string? DisplayName { get; set; }
+
+            public int? YearsOld { get; set; }
+
+            public string? UnrelatedField { get; set; }
+        }
+
+        private sealed class PersonNameOnlyProjection
+        {
+            [RedisField(PropertyName = "Name")]
+            public string? DisplayName { get; set; }
+
+            public string? MissingField { get; set; }
         }
     }
 }
