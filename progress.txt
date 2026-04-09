@@ -8,6 +8,7 @@ Started: Thu Apr  9 14:49:15 EDT 2026
 - Projection hydration should treat Redis field names as lookup keys and CLR property names as JSON output keys, so typed DTO projections can rely on `ReturnField` aliases or `[RedisField(PropertyName = ...)]` without breaking deserialization.
 - When an ad hoc projection shape is needed, prefer a dedicated helper type hydrated inside `SearchResponse<T>` over a new provider overload, so callers keep using the same `SearchAsync<T>(RedisQuery)` execution path and only swap the result type.
 - Manual `RedisAggregation` pipelines serialize `Predicates` in stack order, so command-oriented examples and tests need to push later stages first when composing a pipeline directly.
+- Typed aggregation row mapping should reuse `AggregationResult<T>.Hydrate<THydrated>()` and `RedisObjectHandler.FromHashSet<T>` so aggregation DTOs follow the same alias and `[RedisField(PropertyName = ...)]` rules as search projections.
 
 ## 2026-04-09 15:16:50 EDT - US-003
 - Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
@@ -63,4 +64,13 @@ Started: Thu Apr  9 14:49:15 EDT 2026
   - Patterns discovered: provider-level aggregation support should delegate to a shared `IRedisConnection` `FT.AGGREGATE` helper, mirroring the existing search-side command reuse.
   - Gotchas encountered: `RedisAggregation.Predicates` is a stack, so direct pipeline composition must push the last stage first or the serialized pipeline order will be reversed.
   - Useful context: no nearby `AGENTS.md` files were present under the repo/parent search, so there was nothing area-specific to update for this iteration.
+---
+## 2026-04-09 15:46:27 EDT - US-009
+- Implemented typed aggregation row mapping by adding `AggregationResult<T>.Hydrate<THydrated>()`, documenting when to use aggregation DTO hydration versus full-document hydration, and adding automated coverage for direct alias mapping and `[RedisField(PropertyName = ...)]` aggregation DTOs.
+- Files changed: `src/Redis.OM/Aggregation/AggregationResult.cs`, `src/Redis.OM/Contracts/IRedisConnectionProvider.cs`, `src/Redis.OM/RedisConnectionProvider.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `prd.json`, `ralph/prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0`; `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter "RawQueryTests|ReducerTests"` passed for `net6.0` and `net7.0`
+- Learnings for future iterations:
+  - Patterns discovered: aggregation DTOs can reuse the same hash-to-object materializer as search projections if row hydration stays on `AggregationResult<T>` instead of adding a separate provider surface.
+  - Gotchas encountered: the manual aggregation predicate classes expose fewer aliasing helpers than the LINQ aggregation extensions, so row-mapping tests are most stable when they mock FT.AGGREGATE replies directly unless command serialization is the behavior under test.
+  - Useful context: there are still no `AGENTS.md` files anywhere under this repository, so there was nothing area-specific to update before committing.
 ---

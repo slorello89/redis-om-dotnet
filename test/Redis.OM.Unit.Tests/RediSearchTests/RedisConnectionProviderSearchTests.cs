@@ -223,6 +223,71 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
         }
 
         [Fact]
+        public async Task AggregateAsyncMaterializesAggregationRowsIntoTypedDto()
+        {
+            var aggregationReply = new RedisReply[]
+            {
+                new(1),
+                new(new RedisReply[]
+                {
+                    "DepartmentName",
+                    "Engineering",
+                    "AverageAge",
+                    "32.5",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(aggregationReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+            var result = await provider.AggregateAsync<Person>("person-idx", "@Department:{Engineering}");
+
+            var row = Assert.Single(result);
+            var summary = row.Hydrate<DepartmentSummary>();
+
+            Assert.Equal("Engineering", summary.DepartmentName);
+            Assert.Equal(32.5d, summary.AverageAge);
+        }
+
+        [Fact]
+        public async Task AggregateAsyncMaterializesAggregationRowsIntoTypedDtoUsingRedisFieldAttribute()
+        {
+            var aggregationReply = new RedisReply[]
+            {
+                new(1),
+                new(new RedisReply[]
+                {
+                    "Department",
+                    "Engineering",
+                    "COUNT",
+                    "3",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(aggregationReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+            var aggregation = new RedisAggregation("person-idx")
+            {
+                RawQuery = "@Department:{Engineering}",
+            };
+
+            aggregation.Predicates.Push(new ZeroArgumentReduction(ReduceFunction.COUNT));
+            aggregation.Predicates.Push(new GroupBy(new[] { "Department" }));
+
+            var result = await provider.AggregateAsync<Person>(aggregation);
+
+            var row = Assert.Single(result);
+            var summary = row.Hydrate<DepartmentCountProjection>();
+
+            Assert.Equal("Engineering", summary.DepartmentName);
+            Assert.Equal(3, summary.TotalCount);
+            Assert.Null(summary.MissingField);
+        }
+
+        [Fact]
         public async Task SearchAsyncExecutesParameterizedProjectionQueryWithSelectedFields()
         {
             var projectionReply = new RedisReply[]
@@ -520,6 +585,24 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
         {
             [RedisField(PropertyName = "Name")]
             public string? DisplayName { get; set; }
+
+            public string? MissingField { get; set; }
+        }
+
+        private sealed class DepartmentSummary
+        {
+            public string DepartmentName { get; set; }
+
+            public double AverageAge { get; set; }
+        }
+
+        private sealed class DepartmentCountProjection
+        {
+            [RedisField(PropertyName = "Department")]
+            public string? DepartmentName { get; set; }
+
+            [RedisField(PropertyName = "COUNT")]
+            public int TotalCount { get; set; }
 
             public string? MissingField { get; set; }
         }

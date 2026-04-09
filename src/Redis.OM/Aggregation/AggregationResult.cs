@@ -66,6 +66,18 @@ namespace Redis.OM.Aggregation
         public T Hydrate() => RedisObjectHandler.FromHashSet<T>(Aggregations);
 
         /// <summary>
+        /// Hydrates the aggregation row into a dedicated result type.
+        /// </summary>
+        /// <typeparam name="THydrated">The aggregation DTO type to materialize.</typeparam>
+        /// <returns>An instance of <typeparamref name="THydrated"/> hydrated from the aggregation aliases and loaded fields.</returns>
+        /// <remarks>
+        /// Use this overload for aggregation-specific DTOs. Unlike <see cref="Hydrate()"/>, it does not assume the
+        /// aggregation row should be materialized as the indexed document type used to build the pipeline.
+        /// </remarks>
+        public THydrated Hydrate<THydrated>()
+            where THydrated : notnull => RedisObjectHandler.FromHashSet<THydrated>(Aggregations);
+
+        /// <summary>
         /// Initializes a set of aggregations from an aggregation result.
         /// </summary>
         /// <param name="res">the result to enumerate.</param>

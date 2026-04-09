@@ -102,7 +102,8 @@ namespace Redis.OM
         /// <remarks>
         /// Aggregations return row-oriented <see cref="AggregationResult{T}"/> values rather than <see cref="SearchResponse{T}"/>.
         /// Read computed values from <see cref="AggregationResult{T}.Aggregations"/> or call <see cref="AggregationResult{T}.Hydrate"/>
-        /// only when the pipeline loaded the fields needed for the document type.
+        /// only when the pipeline loaded the fields needed for the document type. Use <see cref="AggregationResult{T}.Hydrate{THydrated}"/>
+        /// to map aggregation aliases and loaded fields into a dedicated DTO when the result shape differs from the indexed document.
         /// </remarks>
         /// <example>
         /// <code>
@@ -116,6 +117,7 @@ namespace Redis.OM
         ///
         /// var rows = await provider.AggregateAsync&lt;Person&gt;(aggregation);
         /// var count = rows[0]["COUNT"];
+        /// var summary = rows[0].Hydrate&lt;DepartmentCount&gt;();
         /// </code>
         /// </example>
         public virtual Task<AggregationResult<T>[]> AggregateAsync<T>(RedisAggregation aggregation)
