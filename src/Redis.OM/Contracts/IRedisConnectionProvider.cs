@@ -24,6 +24,44 @@ namespace Redis.OM.Contracts
         RedisAggregationSet<T> AggregationSet<T>(int chunkSize = 100);
 
         /// <summary>
+        /// Executes a RediSearch aggregation against the supplied index without constructing a <see cref="RedisAggregationSet{T}"/>.
+        /// </summary>
+        /// <typeparam name="T">The indexed document type used as the aggregation record shell.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string. Defaults to <c>*</c>.</param>
+        /// <returns>The materialized aggregation rows.</returns>
+        Task<AggregationResult<T>[]> AggregateAsync<T>(string indexName, string queryText = "*")
+            where T : notnull;
+
+        /// <summary>
+        /// Executes a configured RediSearch aggregation pipeline.
+        /// </summary>
+        /// <typeparam name="T">The indexed document type used as the aggregation record shell.</typeparam>
+        /// <param name="aggregation">The aggregation pipeline to execute.</param>
+        /// <returns>The materialized aggregation rows.</returns>
+        /// <remarks>
+        /// Aggregations return row-oriented <see cref="AggregationResult{T}"/> values rather than <see cref="SearchResponse{T}"/>.
+        /// Read computed values from <see cref="AggregationResult{T}.Aggregations"/> or call <see cref="AggregationResult{T}.Hydrate"/>
+        /// only when the pipeline loaded the fields needed for the document type.
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// var aggregation = new RedisAggregation("person-idx")
+        /// {
+        ///     RawQuery = "@Department:{Engineering}",
+        /// };
+        ///
+        /// aggregation.Predicates.Push(new ZeroArgumentReduction(ReduceFunction.COUNT));
+        /// aggregation.Predicates.Push(new GroupBy(new[] { "Department" }));
+        ///
+        /// var rows = await provider.AggregateAsync&lt;Person&gt;(aggregation);
+        /// var count = rows[0]["COUNT"];
+        /// </code>
+        /// </example>
+        Task<AggregationResult<T>[]> AggregateAsync<T>(RedisAggregation aggregation)
+            where T : notnull;
+
+        /// <summary>
         /// Executes a RediSearch query against the supplied index without constructing an <see cref="IRedisCollection{T}"/>.
         /// </summary>
         /// <typeparam name="T">The materialized result type.</typeparam>

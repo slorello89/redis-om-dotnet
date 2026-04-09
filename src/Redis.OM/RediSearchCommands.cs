@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Redis.OM.Aggregation;
 using Redis.OM.Contracts;
 using Redis.OM.Modeling;
 using Redis.OM.Searching;
@@ -39,6 +40,20 @@ namespace Redis.OM
         {
             var res = await connection.ExecuteAsync("FT.SEARCH", query.SerializeQuery());
             return new SearchResponse<T>(res);
+        }
+
+        /// <summary>
+        /// Execute a RediSearch aggregation with the given pipeline.
+        /// </summary>
+        /// <param name="connection">the connection to redis.</param>
+        /// <param name="aggregation">the aggregation pipeline to execute.</param>
+        /// <typeparam name="T">the indexed document type used as the record shell.</typeparam>
+        /// <returns>The materialized aggregation rows.</returns>
+        public static async Task<AggregationResult<T>[]> AggregateAsync<T>(this IRedisConnection connection, RedisAggregation aggregation)
+            where T : notnull
+        {
+            var res = await connection.ExecuteAsync("FT.AGGREGATE", aggregation.Serialize());
+            return AggregationResult<T>.FromRedisResult(res).ToArray();
         }
 
         /// <summary>

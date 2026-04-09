@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using NSubstitute;
 using NSubstitute.ClearExtensions;
+using Redis.OM.Aggregation;
+using Redis.OM.Aggregation.AggregationPredicates;
 using Redis.OM.Contracts;
 using Redis.OM.Modeling;
 using Redis.OM.Searching;
@@ -154,6 +156,70 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
             Assert.NotNull(provider.CapturedQuery!.Return);
             Assert.Equal(new[] { "RETURN", "2", "Name", "Age" }, provider.CapturedQuery.Return.SerializeArgs);
             Assert.Equal(1, result.DocumentCount);
+        }
+
+        [Fact]
+        public async Task AggregateAsyncExecutesAggregationAgainstProvidedIndex()
+        {
+            var aggregationReply = new RedisReply[]
+            {
+                new(1),
+                new(new RedisReply[]
+                {
+                    "Department",
+                    "Engineering",
+                    "COUNT",
+                    "3",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(aggregationReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+            var aggregation = new RedisAggregation("person-idx")
+            {
+                RawQuery = "@Department:{Engineering}",
+            };
+
+            aggregation.Predicates.Push(new ZeroArgumentReduction(ReduceFunction.COUNT));
+            aggregation.Predicates.Push(new GroupBy(new[] { "Department" }));
+
+            var result = await provider.AggregateAsync<Person>(aggregation);
+
+            await _connection.Received().ExecuteAsync(
+                "FT.AGGREGATE",
+                "person-idx",
+                "@Department:{Engineering}",
+                "GROUPBY",
+                "1",
+                "@Department",
+                "REDUCE",
+                "COUNT",
+                "0",
+                "AS",
+                "COUNT");
+
+            var row = Assert.Single(result);
+            Assert.Equal("Engineering", row["Department"].ToString());
+            Assert.Equal("3", row["COUNT"].ToString());
+        }
+
+        [Fact]
+        public async Task AggregateAsyncRoutesStringOverloadThroughRedisAggregationOverload()
+        {
+            var provider = new SpyRedisConnectionProvider(_connection, new SearchResponse<Person>(_mockReply))
+            {
+                AggregationResponse = new[] { CreateAggregationResultReply("COUNT", "3") },
+            };
+
+            var result = await provider.AggregateAsync<Person>("person-idx", "@Department:{Engineering}");
+
+            Assert.NotNull(provider.CapturedAggregation);
+            Assert.Equal("person-idx", provider.CapturedAggregation!.IndexName);
+            Assert.Equal("@Department:{Engineering}", provider.CapturedAggregation.RawQuery);
+            Assert.Single(result);
+            Assert.Equal("3", result[0]["COUNT"].ToString());
         }
 
         [Fact]
@@ -420,10 +486,20 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
 
             internal RedisQuery? CapturedQuery { get; private set; }
 
+            internal AggregationResult<Person>[] AggregationResponse { get; init; } = Array.Empty<AggregationResult<Person>>();
+
+            internal RedisAggregation? CapturedAggregation { get; private set; }
+
             public override Task<SearchResponse<T>> SearchAsync<T>(RedisQuery query)
             {
                 CapturedQuery = query;
                 return Task.FromResult((SearchResponse<T>)(object)_response);
+            }
+
+            public override Task<AggregationResult<T>[]> AggregateAsync<T>(RedisAggregation aggregation)
+            {
+                CapturedAggregation = aggregation;
+                return Task.FromResult((AggregationResult<T>[])(object)AggregationResponse);
             }
         }
 
@@ -446,6 +522,21 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
             public string? DisplayName { get; set; }
 
             public string? MissingField { get; set; }
+        }
+
+        private static AggregationResult<Person> CreateAggregationResultReply(string key, string value)
+        {
+            var reply = new RedisReply[]
+            {
+                new(1),
+                new(new RedisReply[]
+                {
+                    key,
+                    value,
+                }),
+            };
+
+            return AggregationResult<Person>.FromRedisResult(reply).Single();
         }
     }
 }

@@ -7,6 +7,7 @@ Started: Thu Apr  9 14:49:15 EDT 2026
 - Provider overloads that add projection behavior should accept `ReturnFields` directly instead of `params string[]`, because the command-oriented API already uses `object queryParameters` and string-based overloads become ambiguous for callers.
 - Projection hydration should treat Redis field names as lookup keys and CLR property names as JSON output keys, so typed DTO projections can rely on `ReturnField` aliases or `[RedisField(PropertyName = ...)]` without breaking deserialization.
 - When an ad hoc projection shape is needed, prefer a dedicated helper type hydrated inside `SearchResponse<T>` over a new provider overload, so callers keep using the same `SearchAsync<T>(RedisQuery)` execution path and only swap the result type.
+- Manual `RedisAggregation` pipelines serialize `Predicates` in stack order, so command-oriented examples and tests need to push later stages first when composing a pipeline directly.
 
 ## 2026-04-09 15:16:50 EDT - US-003
 - Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
@@ -53,4 +54,13 @@ Started: Thu Apr  9 14:49:15 EDT 2026
   - Patterns discovered: ad hoc projection support can reuse the existing `SearchAsync<T>` surface by introducing a focused result helper and teaching `SearchResponse<T>` how to hydrate it.
   - Gotchas encountered: running multiple `dotnet test` commands in parallel can race on `src/Redis.OM.Vectorizers/obj/.../ref/Redis.OM.Vectorizers.dll`, so this repo's .NET test slices should be run sequentially when they share build outputs.
   - Useful context: `SearchProjection` stores projected values as case-insensitive string fields and offers `GetValue<T>()` for opt-in conversion, which keeps the row shape lightweight while still handling aliased return fields predictably.
+---
+## 2026-04-09 15:42:19 EDT - US-008
+- Implemented provider-level `AggregateAsync` entry points for the command-oriented interoperability layer, added a shared `IRedisConnection` aggregation command helper, and documented aggregation usage separately from `SearchAsync` with a manual pipeline example.
+- Files changed: `src/Redis.OM/Contracts/IRedisConnectionProvider.cs`, `src/Redis.OM/RediSearchCommands.cs`, `src/Redis.OM/RedisConnectionProvider.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `prd.json`, `ralph/prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0`
+- Learnings for future iterations:
+  - Patterns discovered: provider-level aggregation support should delegate to a shared `IRedisConnection` `FT.AGGREGATE` helper, mirroring the existing search-side command reuse.
+  - Gotchas encountered: `RedisAggregation.Predicates` is a stack, so direct pipeline composition must push the last stage first or the serialized pipeline order will be reversed.
+  - Useful context: no nearby `AGENTS.md` files were present under the repo/parent search, so there was nothing area-specific to update for this iteration.
 ---
