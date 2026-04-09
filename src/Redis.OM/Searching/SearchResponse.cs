@@ -82,7 +82,14 @@ namespace Redis.OM.Searching
         {
             var type = typeof(T);
             var underlyingType = Nullable.GetUnderlyingType(type);
-            if (type.IsPrimitive || type == typeof(string))
+            if (type == typeof(SearchProjection))
+            {
+                var @this = ProjectionSearchResponse(val);
+                Documents = @this.Documents;
+                DocumentCount = @this.DocumentCount;
+                DocumentsSkippedCount = @this.DocumentsSkippedCount;
+            }
+            else if (type.IsPrimitive || type == typeof(string))
             {
                 var @this = PrimitiveSearchResponse(val);
                 Documents = @this.Documents;
@@ -177,6 +184,34 @@ namespace Redis.OM.Searching
                 var docId = (string)arr[i];
                 T? primitive = arr[i + 1].ToArray().Length > 1 ? (T)Convert.ChangeType(arr[i + 1].ToArray()[1], typeof(T)) : default;
                 response.Documents.Add(docId, primitive!);
+            }
+
+            return response;
+        }
+
+        private static SearchResponse<T> ProjectionSearchResponse(RedisReply redisReply)
+        {
+            var arr = redisReply.ToArray();
+            var response = new SearchResponse<T>();
+            response.DocumentCount = arr[0];
+            for (var i = 1; i < arr.Count(); i += 2)
+            {
+                var docId = (string)arr[i];
+                var documentHash = new Dictionary<string, RedisReply>();
+                var docArray = arr[i + 1].ToArray();
+                if (docArray.Length > 1)
+                {
+                    for (var j = 0; j < docArray.Length; j += 2)
+                    {
+                        documentHash.Add(docArray[j], docArray[j + 1]);
+                    }
+
+                    response.Documents.Add(docId, (T)(object)new SearchProjection(documentHash));
+                }
+                else
+                {
+                    response.DocumentsSkippedCount++;
+                }
             }
 
             return response;

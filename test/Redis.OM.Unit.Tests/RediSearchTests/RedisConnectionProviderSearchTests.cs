@@ -265,6 +265,73 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
         }
 
         [Fact]
+        public async Task SearchAsyncMaterializesProjectedFieldsIntoSearchProjection()
+        {
+            var projectionReply = new RedisReply[]
+            {
+                new(1),
+                new("Redis.OM.Unit.Tests.RediSearchTests.Person:01FVN836BNQGYMT80V7RCVY73N"),
+                new(new RedisReply[]
+                {
+                    "DisplayName",
+                    "Steve",
+                    "YearsOld",
+                    "32",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(projectionReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<SearchProjection>(
+                "person-idx",
+                "@Name:{Steve}",
+                new ReturnFields(new[]
+                {
+                    new ReturnField("Name", "DisplayName"),
+                    new ReturnField("Age", "YearsOld"),
+                }));
+
+            var row = Assert.Single(result.Documents).Value;
+            Assert.Equal("Steve", row["DisplayName"]);
+            Assert.True(row.ContainsKey("displayname"));
+            Assert.True(row.TryGetValue("YearsOld", out var yearsOld));
+            Assert.Equal("32", yearsOld);
+            Assert.Equal(32, row.GetValue<int>("YearsOld"));
+        }
+
+        [Fact]
+        public async Task SearchAsyncMaterializesParameterizedProjectionIntoSearchProjection()
+        {
+            var projectionReply = new RedisReply[]
+            {
+                new(1),
+                new("Redis.OM.Unit.Tests.RediSearchTests.Person:01FVN836BNQGYMT80V7RCVY73N"),
+                new(new RedisReply[]
+                {
+                    "Name",
+                    "Steve",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(projectionReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<SearchProjection>(
+                "person-idx",
+                "@Name:{$name}",
+                new { name = "Steve" },
+                new ReturnFields(new[] { "Name" }));
+
+            var row = Assert.Single(result.Documents).Value;
+            Assert.Equal("Steve", row["Name"]);
+        }
+
+        [Fact]
         public async Task SearchAsyncThrowsWhenRequiredParameterIsMissing()
         {
             var provider = new RedisConnectionProvider(_connection);

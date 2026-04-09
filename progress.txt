@@ -6,6 +6,7 @@ Started: Thu Apr  9 14:49:15 EDT 2026
 - When a command-oriented query should target a mapped Redis OM document type, construct `RedisQuery` from the document `Type` so index resolution stays tied to `[Document]` metadata instead of duplicating index-name strings.
 - Provider overloads that add projection behavior should accept `ReturnFields` directly instead of `params string[]`, because the command-oriented API already uses `object queryParameters` and string-based overloads become ambiguous for callers.
 - Projection hydration should treat Redis field names as lookup keys and CLR property names as JSON output keys, so typed DTO projections can rely on `ReturnField` aliases or `[RedisField(PropertyName = ...)]` without breaking deserialization.
+- When an ad hoc projection shape is needed, prefer a dedicated helper type hydrated inside `SearchResponse<T>` over a new provider overload, so callers keep using the same `SearchAsync<T>(RedisQuery)` execution path and only swap the result type.
 
 ## 2026-04-09 15:16:50 EDT - US-003
 - Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
@@ -43,4 +44,13 @@ Started: Thu Apr  9 14:49:15 EDT 2026
   - Patterns discovered: typed projection DTOs can reuse the existing `SearchResponse<T>` hydration path as long as JSON emission keeps Redis lookup names separate from CLR property names.
   - Gotchas encountered: `[RedisField(PropertyName = ...)]` alone was not enough for DTO projections until `SendToJson` stopped serializing the Redis field name as the JSON property name.
   - Useful context: `ReturnField("redisName", "ClrPropertyName")` is the most direct public way to bind projection results onto read-model DTOs without requiring document attributes.
+---
+## 2026-04-09 15:47:16 EDT - US-007
+- Implemented `SearchProjection` as the anonymous-like RediSearch projection result shape, documented its intended use and limitations on the provider projection APIs, and wired `SearchResponse<T>` to materialize ad hoc rows directly from FT.SEARCH field/value pairs without adding a separate provider execution path.
+- Files changed: `src/Redis.OM/Contracts/IRedisConnectionProvider.cs`, `src/Redis.OM/RedisConnectionProvider.cs`, `src/Redis.OM/Searching/SearchProjection.cs`, `src/Redis.OM/Searching/SearchResponse.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0`; an earlier parallel `dotnet test` run hit a transient `Redis.OM.Vectorizers` file-lock, then the same targeted test run passed when rerun sequentially
+- Learnings for future iterations:
+  - Patterns discovered: ad hoc projection support can reuse the existing `SearchAsync<T>` surface by introducing a focused result helper and teaching `SearchResponse<T>` how to hydrate it.
+  - Gotchas encountered: running multiple `dotnet test` commands in parallel can race on `src/Redis.OM.Vectorizers/obj/.../ref/Redis.OM.Vectorizers.dll`, so this repo's .NET test slices should be run sequentially when they share build outputs.
+  - Useful context: `SearchProjection` stores projected values as case-insensitive string fields and offers `GetValue<T>()` for opt-in conversion, which keeps the row shape lightweight while still handling aliased return fields predictably.
 ---

@@ -129,6 +129,8 @@ namespace Redis.OM
         /// Projection DTOs bind returned field names to properties on <typeparamref name="T"/>.
         /// Use <see cref="ReturnField"/> aliases or <see cref="Redis.OM.Modeling.RedisFieldAttribute"/>
         /// when the returned field name should map to a different property name.
+        /// Use <see cref="SearchProjection"/> for lightweight ad hoc projections when you want dictionary-style
+        /// access to returned fields without defining a dedicated DTO.
         /// </remarks>
         /// <example>
         /// <code>
@@ -140,6 +142,19 @@ namespace Redis.OM
         ///         new ReturnField("Name", "DisplayName"),
         ///         new ReturnField("Age", "YearsOld"),
         ///     }));
+        ///
+        /// var rows = await provider.SearchAsync&lt;SearchProjection&gt;(
+        ///     "person-idx",
+        ///     "@Name:{Steve}",
+        ///     new ReturnFields(new[]
+        ///     {
+        ///         new ReturnField("Name", "DisplayName"),
+        ///         new ReturnField("Age", "YearsOld"),
+        ///     }));
+        ///
+        /// var first = rows.Documents.Values.First();
+        /// var displayName = first["DisplayName"];
+        /// var age = first.GetValue&lt;int&gt;("YearsOld");
         /// </code>
         /// </example>
         public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, ReturnFields returnFields)
@@ -158,6 +173,8 @@ namespace Redis.OM
         /// Projection DTOs bind returned field names to properties on <typeparamref name="T"/>.
         /// Use <see cref="ReturnField"/> aliases or <see cref="Redis.OM.Modeling.RedisFieldAttribute"/>
         /// when the returned field name should map to a different property name.
+        /// Use <see cref="SearchProjection"/> for lightweight ad hoc projections when you want dictionary-style
+        /// access to returned fields without defining a dedicated DTO.
         /// </remarks>
         /// <example>
         /// <code>
@@ -170,6 +187,20 @@ namespace Redis.OM
         ///         new ReturnField("Name", "DisplayName"),
         ///         new ReturnField("Age", "YearsOld"),
         ///     }));
+        ///
+        /// var rows = await provider.SearchAsync&lt;SearchProjection&gt;(
+        ///     "person-idx",
+        ///     "@Name:{$name}",
+        ///     new { name = "Steve" },
+        ///     new ReturnFields(new[]
+        ///     {
+        ///         new ReturnField("Name", "DisplayName"),
+        ///         new ReturnField("Age", "YearsOld"),
+        ///     }));
+        ///
+        /// var first = rows.Documents.Values.First();
+        /// var displayName = first["DisplayName"];
+        /// var age = first.GetValue&lt;int&gt;("YearsOld");
         /// </code>
         /// </example>
         public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, object queryParameters, ReturnFields returnFields)
