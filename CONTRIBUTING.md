@@ -6,6 +6,8 @@ Thank you for your interest in the Redis.OM project - if you want to contribute 
 
 If you encounter any issues while using Redis.OM please [open an issue in GitHub](https://github.com/redis/redis-om-dotnet/issues/new). Issues should be opened if you find a bug in the Redis.OM software, an issue in the documentation, or if there's a neat new feature you'd like to see in Redis.OM. If you have any support/usage related questions those are best asked in [Discord](https://discord.gg/redis). 
 
+For the command-oriented RediSearch API work tracked in this branch, open issues against `https://github.com/slorello89/redis-om-dotnet` so repository automation and follow-up work stay pointed at the correct fork.
+
 ## Contributing a Code Change
 
 We welcome code contributions from the community, if you want to contribute code we ask the following:
@@ -26,6 +28,8 @@ We welcome code contributions from the community, if you want to contribute code
 6. If it's your first time contributing please add your Github handle the the Contributors section in the README.
 7. Push your changes to GitHub.
 8. Open a PR.
+
+For the command-oriented RediSearch API work tracked in this branch, open the PR against `https://github.com/slorello89/redis-om-dotnet`.
 
 ## Contributing Docs changes
 

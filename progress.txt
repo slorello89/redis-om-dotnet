@@ -9,6 +9,7 @@ Started: Thu Apr  9 14:49:15 EDT 2026
 - When an ad hoc projection shape is needed, prefer a dedicated helper type hydrated inside `SearchResponse<T>` over a new provider overload, so callers keep using the same `SearchAsync<T>(RedisQuery)` execution path and only swap the result type.
 - Manual `RedisAggregation` pipelines serialize `Predicates` in stack order, so command-oriented examples and tests need to push later stages first when composing a pipeline directly.
 - Typed aggregation row mapping should reuse `AggregationResult<T>.Hydrate<THydrated>()` and `RedisObjectHandler.FromHashSet<T>` so aggregation DTOs follow the same alias and `[RedisField(PropertyName = ...)]` rules as search projections.
+- Command-oriented API documentation belongs in `README.md` near the existing querying and aggregation sections, while fork-specific issue and PR routing belongs in `CONTRIBUTING.md` so automation guidance lives with contributor workflow instructions.
 
 ## 2026-04-09 15:16:50 EDT - US-003
 - Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
@@ -73,4 +74,13 @@ Started: Thu Apr  9 14:49:15 EDT 2026
   - Patterns discovered: aggregation DTOs can reuse the same hash-to-object materializer as search projections if row hydration stays on `AggregationResult<T>` instead of adding a separate provider surface.
   - Gotchas encountered: the manual aggregation predicate classes expose fewer aliasing helpers than the LINQ aggregation extensions, so row-mapping tests are most stable when they mock FT.AGGREGATE replies directly unless command serialization is the behavior under test.
   - Useful context: there are still no `AGENTS.md` files anywhere under this repository, so there was nothing area-specific to update before committing.
+---
+## 2026-04-09 15:49:55 EDT - US-010
+- Implemented README documentation for the command-oriented RediSearch API scope and added examples covering search queries, named parameters, full-document mapping with `RedisQuery`, DTO projections, `SearchProjection`, and aggregation.
+- Files changed: `README.md`, `CONTRIBUTING.md`, `prd.json`, `ralph/prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0` with pre-existing warnings in unrelated projects/tests
+- Learnings for future iterations:
+  - Patterns discovered: command-oriented API scope is easiest to communicate when the README adds a focused section beside the existing querying and aggregation docs instead of creating a disconnected doc page.
+  - Gotchas encountered: fork-specific automation guidance needs to be repeated in both the general README contribution pointer and `CONTRIBUTING.md`, otherwise contributors can miss the override and target the upstream repo by habit.
+  - Useful context: there are still no `AGENTS.md` files under this repository, so there was nothing area-specific to update for this iteration.
 ---

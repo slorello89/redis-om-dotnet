@@ -353,6 +353,95 @@ var results = aggSet.Raw("@Age:[30 70]")
 
 For more details on the Redis Search query syntax for filters, refer to the [RediSearch Query Syntax Documentation](https://redis.io/docs/stack/search/reference/query_syntax/).
 
+#### Command-Oriented RediSearch API
+
+`RedisConnectionProvider.SearchAsync` and `AggregateAsync` provide a command-oriented RediSearch layer for teams that prefer explicit query objects over `IQueryable`. This surface is intended for RediSearch reads and aggregations on indexed Redis OM documents. It is not a general-purpose low-level Redis client API; for arbitrary Redis commands, continue to use `provider.Connection.Execute(...)` or `ExecuteAsync(...)`.
+
+Use the command-oriented API when you want to:
+
+* Execute RediSearch queries directly against a known index
+* Bind named parameters instead of concatenating query strings by hand
+* Materialize full documents, focused DTOs, or ad hoc projection rows
+* Run RediSearch aggregations without constructing a `RedisAggregationSet<T>`
+
+##### Search Query
+
+```csharp
+var people = await provider.SearchAsync<Person>(
+    "person-idx",
+    "@Department:{Engineering}");
+```
+
+##### Named Parameters
+
+```csharp
+var engineers = await provider.SearchAsync<Person>(
+    "person-idx",
+    "@Department:{$department} @Age:[$minAge +inf]",
+    new
+    {
+        department = "Engineering",
+        minAge = 30,
+    });
+```
+
+##### Full-Document Materialization
+
+When you already have a mapped Redis OM document type, build a `RedisQuery` from that type so index resolution stays tied to the `[Document]` metadata:
+
+```csharp
+var query = new RedisQuery(typeof(Person))
+{
+    QueryText = "@Department:{Engineering}",
+};
+
+var people = await provider.SearchAsync<Person>(query);
+```
+
+##### DTO Projection
+
+Use `ReturnFields` to limit the fields returned by RediSearch and materialize them into a dedicated DTO. `ReturnField` aliases map RediSearch field names onto the DTO property names:
+
+```csharp
+public class PersonSummary
+{
+    public string DisplayName { get; set; }
+
+    public int YearsOld { get; set; }
+}
+
+var summaries = await provider.SearchAsync<PersonSummary>(
+    "person-idx",
+    "@Department:{Engineering}",
+    new ReturnFields(new[]
+    {
+        new ReturnField("Name", "DisplayName"),
+        new ReturnField("Age", "YearsOld"),
+    }));
+```
+
+##### Anonymous-Like Projections
+
+Use `SearchProjection` when you want a lightweight row shape instead of creating a dedicated DTO:
+
+```csharp
+var rows = await provider.SearchAsync<SearchProjection>(
+    "person-idx",
+    "@Department:{$department}",
+    new { department = "Engineering" },
+    new ReturnFields(new[]
+    {
+        new ReturnField("Name", "DisplayName"),
+        new ReturnField("Age", "YearsOld"),
+    }));
+
+var first = rows.Documents.Values.First();
+var displayName = first["DisplayName"];
+var age = first.GetValue<int>("YearsOld");
+```
+
+`SearchProjection` is intentionally dictionary-like. It is useful for ad hoc reads, but it does not provide compile-time property binding the way a DTO projection does.
+
 ### Vectors
 
 Redis OM .NET also supports storing and querying Vectors stored in Redis. 
@@ -474,6 +563,22 @@ customerAggregations.Apply(x => ApplyFunctions.GeoDistance(x.RecordShell.Home, -
       "DistanceToMall");
 ```
 
+The command-oriented API also exposes `AggregateAsync` for RediSearch aggregation pipelines when you want the same explicit style as `SearchAsync`:
+
+```csharp
+var aggregation = new RedisAggregation("person-idx")
+{
+    RawQuery = "@Department:{Engineering}",
+};
+
+aggregation.Predicates.Push(new ZeroArgumentReduction(ReduceFunction.COUNT));
+aggregation.Predicates.Push(new GroupBy(new[] { "Department" }));
+
+var rows = await provider.AggregateAsync<Person>(aggregation);
+var count = rows[0]["COUNT"];
+var summary = rows[0].Hydrate<DepartmentCount>();
+```
+
 ## 📚 Documentation
 
 This README just scratches the surface. You can find a full tutorial on the [redis.io](https://redis.io/learn/develop/dotnet/redis-om-dotnet/add-and-retrieve-objects). All the summary docs for this library can be found on the repo's [github page](https://redis.github.io/redis-om-dotnet/).
@@ -509,6 +614,8 @@ Don't want to run Redis yourself? Redis Stack is also available on Redis Cloud. 
 ## ❤️ Contributing
 
 We'd love your contributions! If you want to contribute please read our [Contributing](CONTRIBUTING.md) document.
+
+For this command-oriented RediSearch workstream, open issues, pull requests, and any GitHub automation against `https://github.com/slorello89/redis-om-dotnet`.
 
 ## Connecting to Azure Managed Redis with EntraId
 
