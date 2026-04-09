@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NSubstitute;
@@ -55,6 +57,61 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
             Assert.Equal("person-idx", provider.CapturedQuery!.Index);
             Assert.Equal("@Name:{Steve}", provider.CapturedQuery.QueryText);
             Assert.Equal(1, result.DocumentCount);
+        }
+
+        [Fact]
+        public async Task SearchAsyncExecutesParameterizedQueryWithDictionary()
+        {
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(_mockReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<Person>(
+                "person-idx",
+                "@Name:{$name}",
+                new Dictionary<string, string> { ["name"] = "Steve" });
+
+            await _connection.Received().ExecuteAsync(
+                "FT.SEARCH",
+                "person-idx",
+                "@Name:{$name}",
+                "PARAMS",
+                2,
+                "name",
+                "Steve",
+                "DIALECT",
+                2);
+
+            Assert.Single(result.Documents);
+        }
+
+        [Fact]
+        public async Task SearchAsyncRoutesParameterizedQueriesThroughRedisQueryOverload()
+        {
+            var provider = new SpyRedisConnectionProvider(_connection, new SearchResponse<Person>(_mockReply));
+
+            var result = await provider.SearchAsync<Person>(
+                "person-idx",
+                "@Name:{$name}",
+                new { name = "Steve" });
+
+            Assert.NotNull(provider.CapturedQuery);
+            Assert.Single(provider.CapturedQuery!.NamedParameters);
+            Assert.Equal("name", provider.CapturedQuery.NamedParameters[0].Name);
+            Assert.Equal("Steve", provider.CapturedQuery.NamedParameters[0].Value);
+            Assert.Equal(1, result.DocumentCount);
+        }
+
+        [Fact]
+        public async Task SearchAsyncThrowsWhenRequiredParameterIsMissing()
+        {
+            var provider = new RedisConnectionProvider(_connection);
+
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+                provider.SearchAsync<Person>("person-idx", "@Name:{$name}", new { age = 32 }));
+
+            Assert.Equal("Query parameter 'name' was not provided. (Parameter 'queryText')", exception.Message);
         }
 
         private sealed class SpyRedisConnectionProvider : RedisConnectionProvider

@@ -38,6 +38,25 @@ namespace Redis.OM.Contracts
             where T : notnull;
 
         /// <summary>
+        /// Executes a parameterized RediSearch query against the supplied index without constructing an <see cref="IRedisCollection{T}"/>.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="queryParameters">An anonymous object or dictionary containing named query parameters.</param>
+        /// <returns>A typed search response.</returns>
+        /// <example>
+        /// <code>
+        /// var results = await provider.SearchAsync&lt;Person&gt;(
+        ///     "person-idx",
+        ///     "@Name:{$name}",
+        ///     new { name = "Steve" });
+        /// </code>
+        /// </example>
+        Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, object queryParameters)
+            where T : notnull;
+
+        /// <summary>
         /// Gets a redis collection.
         /// </summary>
         /// <typeparam name="T">The type the collection will be retrieving.</typeparam>

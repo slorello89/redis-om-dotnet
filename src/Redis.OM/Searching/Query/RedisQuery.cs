@@ -31,6 +31,11 @@ namespace Redis.OM.Searching.Query
         public List<object> Parameters { get; set; } = new ();
 
         /// <summary>
+        /// Gets or sets the named parameters for the query.
+        /// </summary>
+        public List<RedisQueryParameter> NamedParameters { get; set; } = new ();
+
+        /// <summary>
         /// Gets or sets the flags for the query options.
         /// </summary>
         public long Flags { get; set; } = 0;
@@ -83,6 +88,7 @@ namespace Redis.OM.Searching.Query
         internal object[] SerializeQuery()
         {
             var parameters = new List<object>(Parameters);
+            var namedParameters = new List<RedisQueryParameter>(NamedParameters);
             var ret = new List<object>();
             if (string.IsNullOrEmpty(Index))
             {
@@ -104,12 +110,17 @@ namespace Redis.OM.Searching.Query
 
             if (parameters.Any())
             {
+                namedParameters.AddRange(parameters.Select((value, index) => new RedisQueryParameter(index.ToString(), value)));
+            }
+
+            if (namedParameters.Any())
+            {
                 ret.Add("PARAMS");
-                ret.Add(parameters.Count * 2);
-                for (var i = 0; i < parameters.Count; i++)
+                ret.Add(namedParameters.Count * 2);
+                foreach (var parameter in namedParameters)
                 {
-                    ret.Add(i.ToString());
-                    ret.Add(parameters[i]);
+                    ret.Add(parameter.Name);
+                    ret.Add(parameter.Value);
                 }
 
                 Dialect |= 1 << 1;

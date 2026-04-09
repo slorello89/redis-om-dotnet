@@ -1,0 +1,16 @@
+# Ralph Progress Log
+Started: Thu Apr  9 14:49:15 EDT 2026
+
+## Codebase Patterns
+- Provider-level RediSearch APIs should construct a `RedisQuery` and then delegate to `SearchAsync(RedisQuery)` so new entry points keep the shared FT.SEARCH serialization and execution path.
+
+## 2026-04-09 15:16:50 EDT - US-003
+- Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
+- Files changed: `src/Redis.OM/Contracts/IRedisConnectionProvider.cs`, `src/Redis.OM/RedisConnectionProvider.cs`, `src/Redis.OM/Searching/Query/RedisQuery.cs`, `src/Redis.OM/Searching/Query/RedisQueryParameter.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `prd.json`, `ralph/prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0`; `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter "RawQueryTests|VectorTests"` passed for `net6.0` and `net7.0`
+- Learnings for future iterations:
+  - Patterns discovered: `RedisQuery.SerializeQuery()` is the single place that translates query parameters into FT.SEARCH `PARAMS`, so new query features should extend it instead of branching command assembly elsewhere.
+  - Gotchas encountered: positional parameter names like `0`, `1`, etc. are already used by vector search internals, so user-facing named parameters must avoid numeric names to prevent collisions.
+  - Useful context: the required runtime PRD path was missing; `prd.json` was created from `ralph/prd.json` and both files were kept in sync for this iteration.
+---
+---
