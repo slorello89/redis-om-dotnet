@@ -118,6 +118,46 @@ namespace Redis.OM
             where T : notnull => SearchAsync<T>(CreateSearchQuery(indexName, queryText, queryParameters));
 
         /// <summary>
+        /// Executes a RediSearch query against the supplied index and limits the returned fields for projection scenarios.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="returnFields">The fields to request from RediSearch.</param>
+        /// <returns>A typed search response.</returns>
+        /// <example>
+        /// <code>
+        /// var results = await provider.SearchAsync&lt;string&gt;(
+        ///     "person-idx",
+        ///     "@Name:{Steve}",
+        ///     new ReturnFields(new[] { "Name" }));
+        /// </code>
+        /// </example>
+        public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, ReturnFields returnFields)
+            where T : notnull => SearchAsync<T>(CreateSearchQuery(indexName, queryText, returnFields));
+
+        /// <summary>
+        /// Executes a parameterized RediSearch query against the supplied index and limits the returned fields for projection scenarios.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="queryParameters">An anonymous object or dictionary containing named query parameters.</param>
+        /// <param name="returnFields">The fields to request from RediSearch.</param>
+        /// <returns>A typed search response.</returns>
+        /// <example>
+        /// <code>
+        /// var results = await provider.SearchAsync&lt;string&gt;(
+        ///     "person-idx",
+        ///     "@Name:{$name}",
+        ///     new { name = "Steve" },
+        ///     new ReturnFields(new[] { "Name" }));
+        /// </code>
+        /// </example>
+        public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, object queryParameters, ReturnFields returnFields)
+            where T : notnull => SearchAsync<T>(CreateSearchQuery(indexName, queryText, queryParameters, returnFields));
+
+        /// <summary>
         /// Executes a provider-level RediSearch query using the shared command implementation.
         /// </summary>
         /// <typeparam name="T">The materialized result type.</typeparam>
@@ -155,6 +195,25 @@ namespace Redis.OM
             new (indexName) { QueryText = queryText ?? "*" };
 
         /// <summary>
+        /// Builds the shared <see cref="RedisQuery"/> instance used by provider-level projection entry points.
+        /// </summary>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="returnFields">The requested return fields.</param>
+        /// <returns>The shared query object.</returns>
+        internal virtual RedisQuery CreateSearchQuery(string indexName, string queryText, ReturnFields returnFields)
+        {
+            if (returnFields is null)
+            {
+                throw new ArgumentNullException(nameof(returnFields));
+            }
+
+            var query = CreateSearchQuery(indexName, queryText);
+            query.Return = returnFields;
+            return query;
+        }
+
+        /// <summary>
         /// Builds the shared <see cref="RedisQuery"/> instance used by provider-level parameterized search entry points.
         /// </summary>
         /// <param name="indexName">The RediSearch index name.</param>
@@ -166,6 +225,26 @@ namespace Redis.OM
             var normalizedQueryText = queryText ?? "*";
             var query = CreateSearchQuery(indexName, normalizedQueryText);
             query.NamedParameters = BuildNamedParameters(queryParameters, normalizedQueryText);
+            return query;
+        }
+
+        /// <summary>
+        /// Builds the shared <see cref="RedisQuery"/> instance used by provider-level parameterized projection entry points.
+        /// </summary>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="queryParameters">The named query parameters.</param>
+        /// <param name="returnFields">The requested return fields.</param>
+        /// <returns>The shared query object.</returns>
+        internal virtual RedisQuery CreateSearchQuery(string indexName, string queryText, object queryParameters, ReturnFields returnFields)
+        {
+            if (returnFields is null)
+            {
+                throw new ArgumentNullException(nameof(returnFields));
+            }
+
+            var query = CreateSearchQuery(indexName, queryText, queryParameters);
+            query.Return = returnFields;
             return query;
         }
 

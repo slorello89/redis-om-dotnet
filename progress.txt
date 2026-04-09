@@ -4,6 +4,7 @@ Started: Thu Apr  9 14:49:15 EDT 2026
 ## Codebase Patterns
 - Provider-level RediSearch APIs should construct a `RedisQuery` and then delegate to `SearchAsync(RedisQuery)` so new entry points keep the shared FT.SEARCH serialization and execution path.
 - When a command-oriented query should target a mapped Redis OM document type, construct `RedisQuery` from the document `Type` so index resolution stays tied to `[Document]` metadata instead of duplicating index-name strings.
+- Provider overloads that add projection behavior should accept `ReturnFields` directly instead of `params string[]`, because the command-oriented API already uses `object queryParameters` and string-based overloads become ambiguous for callers.
 
 ## 2026-04-09 15:16:50 EDT - US-003
 - Implemented named-parameter binding for provider-level RediSearch queries with support for anonymous objects and dictionaries, plus deterministic validation for missing, duplicate, numeric, and null named parameters.
@@ -23,4 +24,13 @@ Started: Thu Apr  9 14:49:15 EDT 2026
   - Patterns discovered: exposing `SearchAsync<T>(RedisQuery)` on the provider gives later stories a single reusable surface for full documents, projections, and advanced query options without adding more ambiguous string overloads.
   - Gotchas encountered: a `SearchAsync<T>(string queryText = "*")` overload would conflict with the existing index-name overload, so type-based document targeting needs a distinct API shape.
   - Useful context: `RedisObjectHandler.FromHashSet<T>` already preserves current null and missing-field behavior for both JSON and hash documents, so provider-level full-document support should keep delegating to that path.
+---
+## 2026-04-09 15:28:38 EDT - US-005
+- Implemented provider-level field selection for projection scenarios by adding `ReturnFields` search overloads for both raw and parameterized RediSearch queries, while keeping execution routed through shared `RedisQuery` internals.
+- Files changed: `src/Redis.OM/Contracts/IRedisConnectionProvider.cs`, `src/Redis.OM/RedisConnectionProvider.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `prd.json`, `ralph/prd.json`, `progress.txt`
+- Quality checks run and result: `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` passed for `net6.0` and `net7.0`
+- Learnings for future iterations:
+  - Patterns discovered: provider-level projection support can stay minimal by setting `RedisQuery.Return` and reusing the existing FT.SEARCH serializer instead of adding a custom projection execution path.
+  - Gotchas encountered: `params string[]` is the wrong public API shape here because it competes with the existing `object queryParameters` overload and makes single-field calls ambiguous.
+  - Useful context: primitive projections already materialize from FT.SEARCH field/value responses, so field-selection coverage can validate the `RETURN` clause without waiting on DTO-mapping work.
 ---

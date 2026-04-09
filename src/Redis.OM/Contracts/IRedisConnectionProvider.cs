@@ -58,6 +58,46 @@ namespace Redis.OM.Contracts
             where T : notnull;
 
         /// <summary>
+        /// Executes a RediSearch query against the supplied index and limits the returned fields for projection scenarios.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="returnFields">The fields to request from RediSearch.</param>
+        /// <returns>A typed search response.</returns>
+        /// <example>
+        /// <code>
+        /// var results = await provider.SearchAsync&lt;string&gt;(
+        ///     "person-idx",
+        ///     "@Name:{Steve}",
+        ///     new ReturnFields(new[] { "Name" }));
+        /// </code>
+        /// </example>
+        Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, ReturnFields returnFields)
+            where T : notnull;
+
+        /// <summary>
+        /// Executes a parameterized RediSearch query against the supplied index and limits the returned fields for projection scenarios.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <param name="queryParameters">An anonymous object or dictionary containing named query parameters.</param>
+        /// <param name="returnFields">The fields to request from RediSearch.</param>
+        /// <returns>A typed search response.</returns>
+        /// <example>
+        /// <code>
+        /// var results = await provider.SearchAsync&lt;string&gt;(
+        ///     "person-idx",
+        ///     "@Name:{$name}",
+        ///     new { name = "Steve" },
+        ///     new ReturnFields(new[] { "Name" }));
+        /// </code>
+        /// </example>
+        Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText, object queryParameters, ReturnFields returnFields)
+            where T : notnull;
+
+        /// <summary>
         /// Executes a RediSearch query that has already been configured through <see cref="RedisQuery"/>.
         /// </summary>
         /// <typeparam name="T">The materialized result type.</typeparam>

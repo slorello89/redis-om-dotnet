@@ -105,6 +105,101 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
         }
 
         [Fact]
+        public async Task SearchAsyncExecutesProjectionQueryWithSelectedFields()
+        {
+            var projectionReply = new RedisReply[]
+            {
+                new(1),
+                new("Redis.OM.Unit.Tests.RediSearchTests.Person:01FVN836BNQGYMT80V7RCVY73N"),
+                new(new RedisReply[]
+                {
+                    "Name",
+                    "Steve",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(projectionReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<string>(
+                "person-idx",
+                "@Name:{Steve}",
+                new ReturnFields(new[] { "Name" }));
+
+            await _connection.Received().ExecuteAsync(
+                "FT.SEARCH",
+                "person-idx",
+                "@Name:{Steve}",
+                "RETURN",
+                "1",
+                "Name");
+
+            Assert.Single(result.Documents);
+            Assert.Equal("Steve", result.Documents.Values.First());
+        }
+
+        [Fact]
+        public async Task SearchAsyncRoutesProjectionQueriesThroughRedisQueryOverload()
+        {
+            var provider = new SpyRedisConnectionProvider(_connection, new SearchResponse<Person>(_mockReply));
+
+            var result = await provider.SearchAsync<Person>(
+                "person-idx",
+                "@Name:{Steve}",
+                new ReturnFields(new[] { "Name", "Age" }));
+
+            Assert.NotNull(provider.CapturedQuery);
+            Assert.NotNull(provider.CapturedQuery!.Return);
+            Assert.Equal(new[] { "RETURN", "2", "Name", "Age" }, provider.CapturedQuery.Return.SerializeArgs);
+            Assert.Equal(1, result.DocumentCount);
+        }
+
+        [Fact]
+        public async Task SearchAsyncExecutesParameterizedProjectionQueryWithSelectedFields()
+        {
+            var projectionReply = new RedisReply[]
+            {
+                new(1),
+                new("Redis.OM.Unit.Tests.RediSearchTests.Person:01FVN836BNQGYMT80V7RCVY73N"),
+                new(new RedisReply[]
+                {
+                    "Name",
+                    "Steve",
+                }),
+            };
+
+            _connection.ClearSubstitute();
+            _connection.ExecuteAsync(Arg.Any<string>(), Arg.Any<object[]>()).Returns(projectionReply);
+
+            var provider = new RedisConnectionProvider(_connection);
+
+            var result = await provider.SearchAsync<string>(
+                "person-idx",
+                "@Name:{$name}",
+                new { name = "Steve" },
+                new ReturnFields(new[] { "Name" }));
+
+            await _connection.Received().ExecuteAsync(
+                "FT.SEARCH",
+                "person-idx",
+                "@Name:{$name}",
+                "PARAMS",
+                2,
+                "name",
+                "Steve",
+                "DIALECT",
+                2,
+                "RETURN",
+                "1",
+                "Name");
+
+            Assert.Single(result.Documents);
+            Assert.Equal("Steve", result.Documents.Values.First());
+        }
+
+        [Fact]
         public async Task SearchAsyncThrowsWhenRequiredParameterIsMissing()
         {
             var provider = new RedisConnectionProvider(_connection);
