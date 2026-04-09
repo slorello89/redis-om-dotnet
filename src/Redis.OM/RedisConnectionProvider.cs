@@ -90,7 +90,7 @@ namespace Redis.OM
         /// </code>
         /// </example>
         public Task<SearchResponse<T>> SearchAsync<T>(string indexName, string queryText = "*")
-            where T : notnull => Connection.SearchAsync<T>(new RedisQuery(indexName) { QueryText = queryText ?? "*" });
+            where T : notnull => SearchAsync<T>(CreateSearchQuery(indexName, queryText));
 
         /// <summary>
         /// Gets a redis collection.
@@ -110,5 +110,23 @@ namespace Redis.OM
         /// <returns>A RedisCollection.</returns>
         public IRedisCollection<T> RedisCollection<T>(bool saveState, int chunkSize = 100)
             where T : notnull => new RedisCollection<T>(Connection, saveState, chunkSize);
+
+        /// <summary>
+        /// Builds the shared <see cref="RedisQuery"/> instance used by provider-level search entry points.
+        /// </summary>
+        /// <param name="indexName">The RediSearch index name.</param>
+        /// <param name="queryText">The RediSearch query string.</param>
+        /// <returns>The shared query object.</returns>
+        internal virtual RedisQuery CreateSearchQuery(string indexName, string queryText = "*") =>
+            new (indexName) { QueryText = queryText ?? "*" };
+
+        /// <summary>
+        /// Executes a provider-level RediSearch query using the shared command implementation.
+        /// </summary>
+        /// <typeparam name="T">The materialized result type.</typeparam>
+        /// <param name="query">The shared RediSearch query object.</param>
+        /// <returns>A typed search response.</returns>
+        internal virtual Task<SearchResponse<T>> SearchAsync<T>(RedisQuery query)
+            where T : notnull => Connection.SearchAsync<T>(query);
     }
 }

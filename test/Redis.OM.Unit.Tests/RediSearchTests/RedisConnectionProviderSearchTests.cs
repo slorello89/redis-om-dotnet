@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.ClearExtensions;
 using Redis.OM.Contracts;
 using Redis.OM.Searching;
+using Redis.OM.Searching.Query;
 using Xunit;
 
 namespace Redis.OM.Unit.Tests.RediSearchTests
@@ -41,6 +42,38 @@ namespace Redis.OM.Unit.Tests.RediSearchTests
             Assert.Equal(1, result.DocumentCount);
             Assert.Single(result.Documents);
             Assert.Equal("Steve", result.Documents.Values.First().Name);
+        }
+
+        [Fact]
+        public async Task SearchAsyncRoutesThroughRedisQueryOverload()
+        {
+            var provider = new SpyRedisConnectionProvider(_connection, new SearchResponse<Person>(_mockReply));
+
+            var result = await provider.SearchAsync<Person>("person-idx", "@Name:{Steve}");
+
+            Assert.NotNull(provider.CapturedQuery);
+            Assert.Equal("person-idx", provider.CapturedQuery!.Index);
+            Assert.Equal("@Name:{Steve}", provider.CapturedQuery.QueryText);
+            Assert.Equal(1, result.DocumentCount);
+        }
+
+        private sealed class SpyRedisConnectionProvider : RedisConnectionProvider
+        {
+            private readonly SearchResponse<Person> _response;
+
+            internal SpyRedisConnectionProvider(IRedisConnection connection, SearchResponse<Person> response)
+                : base(connection)
+            {
+                _response = response;
+            }
+
+            internal RedisQuery? CapturedQuery { get; private set; }
+
+            internal override Task<SearchResponse<T>> SearchAsync<T>(RedisQuery query)
+            {
+                CapturedQuery = query;
+                return Task.FromResult((SearchResponse<T>)(object)_response);
+            }
         }
     }
 }

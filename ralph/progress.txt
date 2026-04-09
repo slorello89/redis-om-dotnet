@@ -3,6 +3,7 @@ Ralph Progress Log
 
 ## Codebase Patterns
 - Prefer unit tests against `IRedisConnection` over `StackExchange.Redis` primitives. If provider-level APIs need coverage, add a narrow internal seam that accepts `IRedisConnection` and expose it to `Redis.OM.Unit.Tests` with `InternalsVisibleTo`.
+- Provider-level RediSearch entry points should delegate into an internal `RedisQuery`-accepting overload so public string-based conveniences stay aligned with the shared `RediSearchCommands` execution path and can be asserted with focused unit tests.
 
 ## 2026-04-09 15:15 EDT - US-001
 - Added a public async provider-level RediSearch entry point, `SearchAsync<T>(string indexName, string queryText = "*")`, so callers can execute raw search reads without constructing `IQueryable`/`IRedisCollection`.
@@ -19,4 +20,19 @@ Ralph Progress Log
 - This environment does not have a reachable local Redis on `localhost:6379`, so Redis-backed functional tests are not viable here.
 - Useful context
 - No relevant `AGENTS.md` files were present under the edited paths, so none were updated.
+---
+## 2026-04-09 15:07 EDT - US-002
+- Routed the provider-level string-based search API through internal shared `RedisQuery` helpers instead of constructing and executing the command inline.
+- Added a focused unit test that verifies the public overload delegates to the internal `RedisQuery` execution path with the expected index and query text.
+- Files changed: `src/Redis.OM/RedisConnectionProvider.cs`, `test/Redis.OM.Unit.Tests/RediSearchTests/RedisConnectionProviderSearchTests.cs`, `ralph/prd.json`, `ralph/progress.txt`
+- Quality checks run and result:
+- `dotnet build src/Redis.OM/Redis.OM.csproj` - passed
+- `dotnet test test/Redis.OM.Unit.Tests/Redis.OM.Unit.Tests.csproj --filter RedisConnectionProviderSearchTests` - passed on `net6.0` and `net7.0`
+- Learnings for future iterations:
+- Patterns discovered
+- A small internal virtual seam on provider convenience APIs is enough to prove delegation into shared query infrastructure without introducing a second execution implementation.
+- Gotchas encountered
+- `RedisConnectionProvider` is StyleCop-enforced, so any new internal seam there needs XML docs and must appear after the public members.
+- Useful context
+- No relevant `AGENTS.md` files were present under `src`, `test`, or `ralph`, so none were updated.
 ---
