@@ -151,6 +151,70 @@
       "priority": 10,
       "passes": true,
       "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add runnable basic search example",
+      "description": "As a developer evaluating the feature, I want a small example for basic Dapper-style RediSearch queries so that I can run it against a local Redis instance and verify the core workflow end to end.",
+      "acceptanceCriteria": [
+        "Add a runnable example project or extend an existing example to show basic Dapper-style RediSearch query execution",
+        "The example targets a local Redis instance and documents the expected local connection settings",
+        "The example seeds or uses local sample data sufficient to produce a successful query result",
+        "Add a validation step or script that runs the example against a local Redis instance and fails with a non-zero exit code if the example does not work",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add runnable parameterized projection example",
+      "description": "As a developer, I want an example that shows named parameters and projection mapping so that I can validate the most important Dapper-style read scenario against a local Redis instance.",
+      "acceptanceCriteria": [
+        "Add a runnable example that demonstrates named query parameters with a projected result type",
+        "The example runs against a local Redis instance and does not depend on remote services",
+        "The example output or validation clearly confirms that parameter binding and projection mapping succeeded",
+        "Add a validation step or script that runs the example against a local Redis instance and fails with a non-zero exit code on failure",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Add runnable aggregation example",
+      "description": "As a developer, I want an aggregation example for the Dapper-style API so that I can verify the typed aggregation path against a local Redis instance before adopting it.",
+      "acceptanceCriteria": [
+        "Add a runnable example that demonstrates aggregation execution through the new command-oriented API",
+        "The example runs against a local Redis instance with local sample data",
+        "The example output or validation clearly confirms that aggregation result mapping succeeded",
+        "Add a validation step or script that runs the example against a local Redis instance and fails with a non-zero exit code on failure",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Add local example validation workflow",
+      "description": "As a maintainer, I want a repeatable workflow for running the new Dapper-style examples locally so that example regressions are caught and contributors can trust the samples.",
+      "acceptanceCriteria": [
+        "Add a documented local workflow or script for running the Dapper-style examples against a local Redis instance",
+        "The workflow states the required local Redis prerequisites including any RediSearch-capable setup assumptions",
+        "The workflow can be used without GitHub-hosted services or remote Redis environments",
+        "The workflow exits non-zero when an example validation step fails",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

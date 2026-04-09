@@ -1,6 +1,30 @@
 Ralph Progress Log
 ==================
 
+Branch: ralph/dapper-interoperability
+Status: In progress
+
+Completed stories:
+- US-001 Add public search query entry point
+- US-002 Route the new API through RedisQuery internals
+- US-003 Add named parameter binding for search queries
+- US-004 Support full document materialization
+- US-005 Add field selection for projection scenarios
+- US-006 Materialize projections into typed DTOs
+- US-007 Define anonymous-like projection result shape
+- US-008 Add aggregation execution entry point
+- US-009 Map aggregation rows into typed results
+- US-010 Document command-oriented API scope and GitHub workflow
+
+Pending stories:
+- US-011 Add runnable basic search example
+- US-012 Add runnable parameterized projection example
+- US-013 Add runnable aggregation example
+- US-014 Add local example validation workflow
+
+Next focus:
+- Build local Redis-backed examples for the Dapper-style API
+- Add repeatable validation that fails non-zero when examples break
 ## Codebase Patterns
 - Prefer unit tests against `IRedisConnection` over `StackExchange.Redis` primitives. If provider-level APIs need coverage, add a narrow internal seam that accepts `IRedisConnection` and expose it to `Redis.OM.Unit.Tests` with `InternalsVisibleTo`.
 - Provider-level RediSearch entry points should delegate into an internal `RedisQuery`-accepting overload so public string-based conveniences stay aligned with the shared `RediSearchCommands` execution path and can be asserted with focused unit tests.
